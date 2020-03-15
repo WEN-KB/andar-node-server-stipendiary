@@ -1,0 +1,3 @@
+device-list.json merge=ours
+creds/** merge=ours
+.env merge=ours
