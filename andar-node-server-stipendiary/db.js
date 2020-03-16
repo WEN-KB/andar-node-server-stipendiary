@@ -96,6 +96,98 @@ class DbService {
     }
   }
 
+  async getBabiesByDeviceid(deviceid) {
+    const params = {
+      TableName: BABY_TABLE,
+      FilterExpression:'deviceid = :deviceid and isDelete = :isDelete',
+        // KeyConditionExpression: 'deviceid = :deviceid',
+      ExpressionAttributeValues: {
+        ':deviceid': deviceid,
+        ':isDelete': false
+      },
+    }
+    const Items = await this.scanRecursively(params);
+    return Items;
+  }
+
+  async createBaby(data) {
+    return this.dynamodb
+      .put({ 
+        TableName: BABY_TABLE, 
+        Item: data 
+      })
+      .promise();
+  }
+
+  async updateBaby(id, data) {
+    const {
+      birthday,
+      checkInDate,
+      checkOutDate,
+      bed,
+      height,
+      mom,
+      notice,        
+      sex,
+      weight,
+      battery,
+      isPaused,
+      hasAlarmHandled,
+      cautious,
+      deviceid,
+      isFixed,
+      isDelete
+    } = data
+    return this.dynamodb
+      .update({
+        TableName: BABY_TABLE,
+        Key: { id },
+        ExpressionAttributeValues: {
+          ':birthday': birthday,
+          ':checkInDate': checkInDate,
+          ':checkOutDate': checkOutDate,
+          ':bed': bed,
+          ':height': height,
+          ':mom': mom,
+          ':notice': notice,
+          ':sex': sex,
+          ':weight': weight,
+          ':deviceid': deviceid,
+        },
+        UpdateExpression: `SET birthday = :birthday,checkInDate = :checkInDate,checkOutDate = :checkOutDate,bed = :bed,height = :height,mom = :mom,notice = :notice,sex = :sex,weight = :weight,deviceid = :deviceid`,
+      })
+      .promise();
+  }
+
+  async getBabies() {
+    const params = {
+        TableName: BABY_TABLE,
+        // ProjectionExpression: 'patches, id, parent_id, isPaused,  device_sn, discharged',
+        // FilterExpression:'discharged = :discharged or attribute_not_exists(discharged)',
+        // ExpressionAttributeValues: {
+        //   ':discharged': false,
+        // },
+    }
+    try {
+        const Items = await this.scanRecursively(params);
+        return Items;
+      } catch (err) {
+        console.error(err);
+        return [];
+      }
+  }
+
+  async scanRecursively (params) {
+    const data = await this.dynamodb.scan(params).promise();
+    const { Items, LastEvaluatedKey } = data
+    if (LastEvaluatedKey) {
+        params.ExclusiveStartKey = LastEvaluatedKey;
+        return Items.concat(await this.scanRecursively(params));
+    } else {
+        return Items;
+    }
+  }
+
   updateBattery(id, date) {
     return this.dynamodb
       .update({
@@ -105,6 +197,47 @@ class DbService {
           ':battery': date,
         },
         UpdateExpression: 'SET battery = :battery',
+      })
+      .promise();
+  }
+
+  // 固顶
+  updateIsFixed(id, flag) {
+    return this.dynamodb
+      .update({
+        TableName: BABY_TABLE,
+        Key: { id },
+        ExpressionAttributeValues: {
+          ':isFixed': flag,
+        },
+        UpdateExpression: 'SET isFixed = :isFixed',
+      })
+      .promise();
+  }
+
+    // 清空
+    updateIsDelete(id, flag) {
+      return this.dynamodb
+        .update({
+          TableName: BABY_TABLE,
+          Key: { id },
+          ExpressionAttributeValues: {
+            ':isDelete': flag,
+          },
+          UpdateExpression: 'SET isDelete = :isDelete',
+        })
+        .promise();
+    }
+  // 暂停提醒
+  setPaused(id, flag) {
+    return this.dynamodb
+      .update({
+        TableName: BABY_TABLE,
+        Key: { id },
+        ExpressionAttributeValues: {
+          ':isPaused': flag,
+        },
+        UpdateExpression: 'SET isPaused = :isPaused',
       })
       .promise();
   }

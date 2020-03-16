@@ -1,94 +1,125 @@
 'use strict'
 const { bedDataFilter } = require('../model/bed/model');
+const db = require('../db');
+const uuid = require('uuid')
 module.exports = async function (fastify, opts, next) {
   fastify.get('/', function (request, reply) {
     reply.send({ root: true })
   })
 
+  fastify.get('/api/baby', async (request, reply) => {
+    try {
+      // console.log(await db.getbabies());
+      const babies = await db.getBabies('1ecc1c86-19c9-41bf-b282-1c2ea406642a')
+      reply.send({ babies })
+    } catch (error) {
+      console.log(error);
+      reply.send({ test: error })
+    }
+})
+fastify.get('/api/set', async (request, reply) => {
+    try {
+      // console.log(await db.getbabies());
+    //   "id": "84899673-1083-48cb-9765-3252f98b3b29",
+    //   "parent_id": "1ecc1c86-19c9-41bf-b282-1c2ea406642a"
+      const babies = await db.getSettings('1ecc1c86-19c9-41bf-b282-1c2ea406642a')
+      reply.send({ babies })
+    } catch (error) {
+      console.log(error);
+      reply.send({ test: error })
+    }
+})
+
 
   const newBed = async(bedData = {}, userId) => {
-    
-    console.log("come==========1"+bedData.id)
-    const { deviceid } = bedData;
+    const {
+        birthday,
+        checkInDate,
+        checkOutDate,
+        bed,
+        height,
+        mom,
+        notice,        
+        sex,
+        weight,
+        battery,
+        isPaused,
+        hasAlarmHandled,
+        cautious,
+        deviceid,
+        isFixed,
+        isDelete,
+    } = bedData;
+    console.log('bedData', bedData)
     if (!deviceid) throw new Error(stateMsgList.DEVICE_ERR)
     // 数据库查询这个设备是否被使用
-    const _bedInfo = await bedInfo.findOne({ where: { deviceid, isDelete: false } })
-    console.log("_bedInfo",JSON.stringify(request.body))
-    if (_bedInfo) {
-        throw new Error(error);
+    const _bedInfo = await db.getBabiesByDeviceid(deviceid)
+    console.log('_bedInfo', _bedInfo)
+    if (_bedInfo.length >= 1) {
+        throw new Error('床位已存在');
     }
-    try { 
-        // await checkRoomBed(bedData.bed, deviceid)
-        // 对参数进行检测
-        bedDataFilter(bedData);
-    } catch (error) {
-        throw new Error(error)
-    }
-    // 住民是哪家医院的。 userId 是token 中获取
-   // bedData.parent_id = userId;
-    // id 格式uuid
-   // bedData.id = await uuid.v1();
-    // nosql 可以直接存储json， 不需要这不
-   // bedDataJSON = toJsonString(bedData)
-    // 写入数据库
-   // return await bedInfo.create(bedDataJSON);
+    bedData.id = await uuid.v4();
+    const res = await db.createBaby(bedData)
+    console.log('res', res)
+    return res;
 }
 
-
-  fastify.put('/api/baby/:id', async (request, reply) => {
-    const b_id = request.params.id
-   
+  fastify.post('/api/baby', async (request, reply) => {
+    // const b_id = request.params.id
     const bedData = request.body
-    console.log('bedData>>>', bedData);
-    const { deviceid, user_id, ...rest } = bedData;  // 这个id 前端传的设备id
-   // bedData.deviceid = deviceid; // 设备id 你那边应该是device_sn
+    const { id, userId, ...rest } = bedData;
+    rest.deviceid = id; // 设备id
+    rest.isFixed = false; // 固首
+    rest.isDelete = false; // 删除
     let data = false;
+    console.log('rest', rest);
     try {
-        data = await newBed(bedData, user_id)
-       ctx.body = data
+      await newBed(rest, userId)
+      reply.send({ rest })
+        // ctx.body = data
     } catch (error) {
         console.error(error)
         reply.code(501).send(error);
-       // ctx.status = 400;
-        //ctx.body = new ErrorModel(error.message)
     }
-
-
-
-
-    // try {
-    //   if (!isEmpty(device_sn) && device_sn != old_device_sn) {
-    //     await updateThingShadow(device_sn, b_id)
-    //     andarService.updateRecords(b_id, []) 
-        
-    //     if (!isEmpty(old_device_sn)) {
-    //       await updateThingShadow(old_device_sn, DEFAULT_B_ID)
-    //     }
-    //   }
-    // } catch(e) {
-    //   console.error(e)
-    //   reply.code(501).send(e);
-    // }
-  
-    // if (isPaused != undefined) {
-    //   andarService.updatePausedList(b_id, isPaused);
-    //   patchService.updatePausedList(b_id, isPaused, user_id);
-    // }
-    
-    // if (device_sn && !isEmpty(device_sn)) {
-    //   andarService.workaroundUpdateBabyId(device_sn, b_id)
-    // }
-    // patchService.updatePatch(b_id, user_id, rest);
     reply.code(204);
   });
 
+  fastify.put('/api/baby/:id', async (request, reply) => {
+    const b_id = request.params.id;
+    const bedData = request.body;
+    await db.updateBaby(b_id, bedData)
+    reply.code(204);
+  })
+
+  // 固顶
+  fastify.post('/api/fixed/:id', async(request, reply) => {
+    const id = request.params.id
+    const { userId, flag } = request.body
+    const res = await db.updateIsFixed(id, flag)
+    // ctx.body = {b_id, bedData}
+    reply.send({ res })
+    // reply.code(204);
+  })
+
+  // 清空床位
+  fastify.delete('/api/baby/:id', async(request, reply) => {
+    const id = request.params.id
+    const { userId } = request.body
+    const res = await db.updateIsDelete(id, true)
+    reply.send({ id, res })
+  })
+
+  // 设置暂停
+  fastify.put('/api/setPaused/:id', async(request, reply) => {
+    const id = request.params.id
+    const { flag, userId } = request.body
+    const res = await db.setPaused(id, flag)
+    reply.send({ id, res })
+  })
+
+  // 修改bedinfo
+  fastify.put('/api/baby', async(request, reply) => {
+
+  })
   next()
 }
-
-// If you prefer async/await, use the following
-//
-// module.exports = async function (fastify, opts) {
-//   fastify.get('/', async function (request, reply) {
-//     return { root: true }
-//   })
-// }

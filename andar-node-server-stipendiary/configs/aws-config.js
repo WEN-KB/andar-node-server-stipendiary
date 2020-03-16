@@ -6,7 +6,7 @@ module.exports = {
   ALARM_TABLE: 'qt_alarm',
   DEVICE_LOG_TABLE: 'qt_device_log',
   BABY_TABLE: 'qt_baby',
-  IOT_ENDPOINT: 'a3mzfhe6yiv1bx-ats.iot.us-east-2.amazonaws.com',
+  IOT_ENDPOINT: 'a3inbsgq46oz45-ats.iot.us-east-2.amazonaws.com',
   RECORD_TOPIC_PREFIX: process.env.STAGE === 'prod' ? 'data-qt' : 'data-test',
   RAW_DATA_TOPIC_PREFIX: 'deviceData-qt',
 };
