@@ -1,3 +1,5 @@
+const moment = require('moment')
+
 const bedDataFilter = (bedData) => {
     console.log('filter>>>>>')
     const {
@@ -29,8 +31,15 @@ const bedDataFilter = (bedData) => {
     if (moment(checkInDate).isAfter(checkOutDate)) throw new Error(stateMsgList.CHECKIN_BEFORE)
 
     // 这里可以直接调用, ....
-    validate_battery();
-    validate_identityNumber()
+    validate_identityNumber(identityNumber)
+    validate_bed(bed);
+    validate_mom(mom);
+    validate_birthday(birthday);
+    validate_checkInDate(checkInDate);
+    validate_checkOutDate(checkOutDate);
+    validate_height(height);
+    validate_notice(notice);
+    validate_weight(weight);
 }
 
 // 过滤中的 value

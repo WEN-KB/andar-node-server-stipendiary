@@ -52,15 +52,21 @@ fastify.get('/api/set', async (request, reply) => {
     } = bedData;
     console.log('bedData', bedData)
     if (!deviceid) throw new Error(stateMsgList.DEVICE_ERR)
+    if (!bed) throw new Error('床号不能为控');
     // 数据库查询这个设备是否被使用
     const _bedInfo = await db.getBabiesByDeviceid(deviceid)
+    // 查询床号是否被使用
+    const _bedInfo2 = await db.getBabiesByBed(bed)
+
     console.log('_bedInfo', _bedInfo)
-    if (_bedInfo.length >= 1) {
+    if (_bedInfo.length >= 1 || _bedInfo2.length >=1) {
         throw new Error('床位已存在');
     }
+    await bedDataFilter(bedData);
     bedData.id = await uuid.v4();
-    const res = await db.createBaby(bedData)
-    console.log('res', res)
+    bedData.parent_id = userId || 'test_user_id';
+    const res = await db.createBaby(bedData);
+    console.log('res', res);
     return res;
 }
 
@@ -75,8 +81,7 @@ fastify.get('/api/set', async (request, reply) => {
     console.log('rest', rest);
     try {
       await newBed(rest, userId)
-      reply.send({ rest })
-        // ctx.body = data
+      reply.send({ message: 'ok' })
     } catch (error) {
         console.error(error)
         reply.code(501).send(error);
@@ -87,8 +92,25 @@ fastify.get('/api/set', async (request, reply) => {
   fastify.put('/api/baby/:id', async (request, reply) => {
     const b_id = request.params.id;
     const bedData = request.body;
-    await db.updateBaby(b_id, bedData)
-    reply.code(204);
+    const { deviceid, bed } = bedData;
+    try {
+        // 检查设备 和 床是否已经被人使用
+        if (!deviceid) throw new Error(stateMsgList.DEVICE_ERR)
+        if (!bed) throw new Error('床号不能为控');
+        // 数据库查询这个设备是否被使用
+        const _bedInfo = await db.getBabiesByDeviceid(deviceid)
+        // 查询床号是否被使用
+        const _bedInfo2 = await db.getBabiesByBed(bed)
+        // 这里检查如果村子，再判断是不是自己的信息
+        if (_bedInfo.length >=1 && _bedInfo[0].id != b_id) throw new Error('设备已使用');
+        if (_bedInfo2.length>=1 && _bedInfo2[0].id != b_id) throw new Error('床号已使用');
+        await bedDataFilter(bedData);
+        await db.updateBaby(b_id, bedData)
+        reply.send({ message: 'ok' })
+    } catch (error) {
+        console.error(error)
+        reply.code(501).send(error);
+    }
   })
 
   // 固顶

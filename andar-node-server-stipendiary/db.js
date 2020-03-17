@@ -96,6 +96,7 @@ class DbService {
     }
   }
 
+  // 根据设备id 获取住民
   async getBabiesByDeviceid(deviceid) {
     const params = {
       TableName: BABY_TABLE,
@@ -110,6 +111,21 @@ class DbService {
     return Items;
   }
 
+  // 根据床号 获取住民
+  async getBabiesByBed(bed) {
+    const params = {
+      TableName: BABY_TABLE,
+      FilterExpression:'bed = :bed and isDelete = :isDelete',
+      ExpressionAttributeValues: {
+        ':bed': bed,
+        ':isDelete': false
+      },
+    }
+    const Items = await this.scanRecursively(params);
+    return Items;
+  }
+
+  // 新增 住民
   async createBaby(data) {
     return this.dynamodb
       .put({ 
@@ -119,6 +135,7 @@ class DbService {
       .promise();
   }
 
+  // 修改住民
   async updateBaby(id, data) {
     const {
       birthday,

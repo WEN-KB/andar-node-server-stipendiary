@@ -34,6 +34,7 @@
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "moment": "^2.24.0",
     "prettier": "^1.17.0",
     "tap": "^12.5.3"
   }
