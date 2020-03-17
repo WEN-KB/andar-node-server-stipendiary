@@ -153,7 +153,8 @@ class DbService {
       cautious,
       deviceid,
       isFixed,
-      isDelete
+      isDelete,
+      diseases
     } = data
     return this.dynamodb
       .update({
@@ -170,8 +171,9 @@ class DbService {
           ':sex': sex,
           ':weight': weight,
           ':deviceid': deviceid,
+          ':diseases': diseases,
         },
-        UpdateExpression: `SET birthday = :birthday,checkInDate = :checkInDate,checkOutDate = :checkOutDate,bed = :bed,height = :height,mom = :mom,notice = :notice,sex = :sex,weight = :weight,deviceid = :deviceid`,
+        UpdateExpression: `SET birthday = :birthday,checkInDate = :checkInDate,checkOutDate = :checkOutDate,bed = :bed,height = :height,mom = :mom,notice = :notice,sex = :sex,weight = :weight,deviceid = :deviceid,diseases=:diseases`,
       })
       .promise();
   }

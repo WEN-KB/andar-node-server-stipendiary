@@ -49,6 +49,7 @@ fastify.get('/api/set', async (request, reply) => {
         deviceid,
         isFixed,
         isDelete,
+        diseases,
     } = bedData;
     console.log('bedData', bedData)
     if (!deviceid) throw new Error(stateMsgList.DEVICE_ERR)
@@ -69,7 +70,23 @@ fastify.get('/api/set', async (request, reply) => {
     console.log('res', res);
     return res;
 }
-
+// 参数
+// {	"id": "mytest3xxx",
+//     "birthday": "2019-12-11T16:00:00.000Z",
+//     "checkInDate": "2019-12-12T16:00:00.000Z",
+//     "checkOutDate": "2019-12-13T16:00:00.000Z",
+//     "bed": 1008611,
+//     "height": null,
+//     "mom": "4010",
+//     "notice": null,
+//     "sex": "M",
+//     "weight": null,
+//     "battery": null,
+//     "isPaused": true,
+//     "hasAlarmHandled": true,
+//     "cautious": false,
+//  	"diseases":["嘿嘿","哈哈"]
+//   }
   fastify.post('/api/baby', async (request, reply) => {
     // const b_id = request.params.id
     const bedData = request.body
@@ -89,6 +106,22 @@ fastify.get('/api/set', async (request, reply) => {
     reply.code(204);
   });
 
+  // {	"deviceid": "mytest3xxx",
+//     "birthday": "2019-12-11T16:00:00.000Z",
+//     "checkInDate": "2019-12-12T16:00:00.000Z",
+//     "checkOutDate": "2019-12-13T16:00:00.000Z",
+//     "bed": 1008611,
+//     "height": null,
+//     "mom": "4010",
+//     "notice": null,
+//     "sex": "M",
+//     "weight": null,
+//     "battery": null,
+//     "isPaused": true,
+//     "hasAlarmHandled": true,
+//     "cautious": false,
+//  	"diseases":["嘿嘿","哈哈"]
+//   }
   fastify.put('/api/baby/:id', async (request, reply) => {
     const b_id = request.params.id;
     const bedData = request.body;
