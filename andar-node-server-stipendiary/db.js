@@ -54,31 +54,29 @@ class DbService {
       return Items;
     } catch (err) {
       console.error(err);
-      return [];
+      return [];S
     }
   }
 
-  async getSettings(userId) {
+  // 获取个人设定
+  async  getSubSettings(id) {
     try {
-      const {
-        Item: { id, ...rest },
-      } = await this.dynamodb
+      return await this.dynamodb
         .get({
           TableName: SETTINGS_TABLE,
-          Key: { id: userId },
+          Key: { id },
         })
         .promise();
-
-      return rest;
     } catch (err) {
       console.error(err);
       return {};
     }
   }
 
-  async getSubSettings(userId) {
+  // 获取全局设定
+  async getSettings(userId) {
     try {
-      const { Items } = await this.dynamodb
+      return await this.dynamodb
         .query({
           TableName: SETTINGS_TABLE,
           IndexName: SETTINGS_TABLE_PARENT_GSI,
@@ -89,22 +87,68 @@ class DbService {
         })
         .promise();
 
-      return Items;
     } catch (err) {
       console.error(err);
       return [];
     }
   }
 
+  // 新增设定
+  async addSettings(data) {
+    return this.dynamodb
+    .put({ 
+      TableName: SETTINGS_TABLE, 
+      Item: data 
+    })
+    .promise();
+  }
+
+  // 修改设定
+  async updateSettings(data) {
+    const {
+      id,
+      apnea,
+      heartRate,
+      respirationRate,
+      temperature,
+      leaving,
+      parent_id,
+      fallAlert,
+      leaveAlert,
+      turnSetting,
+    } = data;
+    return this.dynamodb
+      .update({
+        TableName: SETTINGS_TABLE,
+        Key: { id },
+        ExpressionAttributeValues: {
+          // ':id': id,
+          ':apnea': apnea,
+          ':heartRate': heartRate,
+          ':respirationRate': respirationRate,
+          ':temperature': temperature,
+          ':leaving': leaving,
+          ':parent_id': parent_id,
+          ':fallAlert': fallAlert,
+          ':leaveAlert': leaveAlert,
+          ':turnSetting': turnSetting,
+        },
+        UpdateExpression: `SET apnea=:apnea,heartRate=:heartRate,respirationRate=:respirationRate,temperature=:temperature,leaving=:leaving,parent_id=:parent_id,fallAlert=:fallAlert,leaveAlert=:leaveAlert,turnSetting=:turnSetting`,
+        ReturnValues:"UPDATED_NEW",
+      })
+      .promise();
+  }
+
   // 根据设备id 获取住民
-  async getBabiesByDeviceid(deviceid) {
+  async getBabiesByDeviceid(deviceid, userId) {
     const params = {
       TableName: BABY_TABLE,
-      FilterExpression:'deviceid = :deviceid and isDelete = :isDelete',
+      FilterExpression:'parent_id = :parent_id and deviceid = :deviceid and isDelete = :isDelete',
         // KeyConditionExpression: 'deviceid = :deviceid',
       ExpressionAttributeValues: {
         ':deviceid': deviceid,
-        ':isDelete': false
+        ':isDelete': false,
+        ':parent_id': userId
       },
     }
     const Items = await this.scanRecursively(params);
@@ -112,13 +156,14 @@ class DbService {
   }
 
   // 根据床号 获取住民
-  async getBabiesByBed(bed) {
+  async getBabiesByBed(bed, userId) {
     const params = {
       TableName: BABY_TABLE,
-      FilterExpression:'bed = :bed and isDelete = :isDelete',
+      FilterExpression:'parent_id = :parent_id and bed = :bed and isDelete = :isDelete',
       ExpressionAttributeValues: {
         ':bed': bed,
-        ':isDelete': false
+        ':isDelete': false,
+        ':parent_id': userId
       },
     }
     const Items = await this.scanRecursively(params);
@@ -154,13 +199,23 @@ class DbService {
       deviceid,
       isFixed,
       isDelete,
-      diseases
+      diseases,
+      identityNumber
     } = data
+    const ExpressionAttributeValues = {};
+    let UpdateExpression = ``;
+    if (isPaused == true || isPaused == false)  {
+      ExpressionAttributeValues[':isPaused'] = isPaused;
+      UpdateExpression = `,isPaused = :isPaused`
+    }
+
     return this.dynamodb
       .update({
         TableName: BABY_TABLE,
         Key: { id },
         ExpressionAttributeValues: {
+          ...ExpressionAttributeValues,
+          ':identityNumber': identityNumber,
           ':birthday': birthday,
           ':checkInDate': checkInDate,
           ':checkOutDate': checkOutDate,
@@ -173,7 +228,8 @@ class DbService {
           ':deviceid': deviceid,
           ':diseases': diseases,
         },
-        UpdateExpression: `SET birthday = :birthday,checkInDate = :checkInDate,checkOutDate = :checkOutDate,bed = :bed,height = :height,mom = :mom,notice = :notice,sex = :sex,weight = :weight,deviceid = :deviceid,diseases=:diseases`,
+        UpdateExpression: `SET identityNumber=:identityNumber, birthday = :birthday,checkInDate = :checkInDate,checkOutDate = :checkOutDate,bed = :bed,height = :height,mom = :mom,notice = :notice,sex = :sex,weight = :weight,deviceid = :deviceid,diseases=:diseases`+UpdateExpression,
+        ReturnValues:"UPDATED_NEW",
       })
       .promise();
   }
@@ -181,6 +237,12 @@ class DbService {
   async getBabies() {
     const params = {
         TableName: BABY_TABLE,
+        FilterExpression:'discharged = :discharged or attribute_not_exists(discharged)',
+        // KeyConditionExpression: 'deviceid = :deviceid',
+        ExpressionAttributeValues: {
+          ':isDelete': false,
+          ':discharged': false
+        },
         // ProjectionExpression: 'patches, id, parent_id, isPaused,  device_sn, discharged',
         // FilterExpression:'discharged = :discharged or attribute_not_exists(discharged)',
         // ExpressionAttributeValues: {
@@ -248,8 +310,8 @@ class DbService {
         .promise();
     }
   // 暂停提醒
-  setPaused(id, flag) {
-    return this.dynamodb
+  async setPaused(id, flag) {
+    return await this.dynamodb
       .update({
         TableName: BABY_TABLE,
         Key: { id },
@@ -260,6 +322,26 @@ class DbService {
       })
       .promise();
   }
+
+
+
+  // delete settings
+  async deleteSetting(id) {
+    return await this.dynamodb
+      .delete({
+        TableName: SETTINGS_TABLE,//待删除操作的表
+        Key:{
+            'id': id,
+        },
+        // ConditionExpression:"info.rating <= :val",//删除条件表达式
+        // ExpressionAttributeValues: {
+        //     ":val": 5.0   //条件值 
+        // }
+      })
+      .promise();
+  }
+
+
 
   putRawData(raw) {
     return this.dynamodb
