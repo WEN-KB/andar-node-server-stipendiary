@@ -40,6 +40,7 @@ const newSetting = async (settingDataJSON, userId) => {
     let result = {};
     if (hasSetting && hasSetting.Item) {
         console.log('修改');
+        
         result = await db.updateSettings(params)
     } else {
         console.log('新增')
