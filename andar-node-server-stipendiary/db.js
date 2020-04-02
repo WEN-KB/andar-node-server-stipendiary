@@ -80,13 +80,12 @@ class DbService {
         .query({
           TableName: SETTINGS_TABLE,
           IndexName: SETTINGS_TABLE_PARENT_GSI,
-          KeyConditionExpression: 'parent_id = :parent_id',
+          KeyConditionExpression: 'id = :id',
           ExpressionAttributeValues: {
-            ':parent_id': userId,
+            ':id': userId,
           },
         })
         .promise();
-
     } catch (err) {
       console.error(err);
       return [];
@@ -128,12 +127,11 @@ class DbService {
           ':respirationRate': respirationRate,
           ':temperature': temperature,
           ':leaving': leaving,
-          ':parent_id': parent_id,
           ':fallAlert': fallAlert,
           ':leaveAlert': leaveAlert,
           ':turnSetting': turnSetting,
         },
-        UpdateExpression: `SET apnea=:apnea,heartRate=:heartRate,respirationRate=:respirationRate,temperature=:temperature,leaving=:leaving,parent_id=:parent_id,fallAlert=:fallAlert,leaveAlert=:leaveAlert,turnSetting=:turnSetting`,
+        UpdateExpression: `SET apnea=:apnea,heartRate=:heartRate,respirationRate=:respirationRate,temperature=:temperature,leaving=:leaving,fallAlert=:fallAlert,leaveAlert=:leaveAlert,turnSetting=:turnSetting`,
         ReturnValues:"UPDATED_NEW",
       })
       .promise();

@@ -3,7 +3,8 @@ const {
     bedDataFilter
 } = require('../model/bed/model');
 const {
-    newSetting
+    newSetting,
+    updateSetting
 } = require('../model/bed/setting');
 const db = require('../db');
 const uuid = require('uuid')
@@ -200,8 +201,18 @@ module.exports = async function (fastify, opts, next) {
         }
     })
 
-    fastify.put('/api/settings/:id', async () => {
-
+    fastify.put('/api/settings/:id', async (request, reply) => {
+        const id = request.params.id;
+        const requestData = request.body;
+        let { userId, ...settingData } = requestData;
+        userId = '579f4f40-6424-11ea-88c6-1597d8d7b8bf';
+        try {
+            const res = await updateSetting(settingData, userId, id)
+            reply.send({res})
+         } catch (error) {
+            console.log(error);
+            reply.send({error})            
+         }
     })
 
     // 删除设定

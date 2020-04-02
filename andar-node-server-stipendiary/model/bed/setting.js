@@ -40,13 +40,25 @@ const newSetting = async (settingDataJSON, userId) => {
     let result = {};
     if (hasSetting && hasSetting.Item) {
         console.log('修改');
-        
-        result = await db.updateSettings(params)
+        const { parent_id, ..._params } = params
+        result = await db.updateSettings(_params)
     } else {
         console.log('新增')
         result = await db.addSettings(params)
     }
     return result;
+}
+
+const updateSetting = async (settingDataJSON, userId, id) => {
+    settingDataFilter(settingDataJSON)
+    let { isPaused, ...params } = settingDataJSON;
+    params.id = id || userId
+    const { parent_id, ...updateData } = params
+    const hasSetting = await db.getSubSettings(params.id);
+    if (!hasSetting) {
+        throw new Error(stateMsgList.NOTFOUNDSETTING);
+    }
+    await db.updateSettings(updateData)
 }
 
 
@@ -199,4 +211,5 @@ const validate_turnSetting = value => {
 
 module.exports = { 
     newSetting,
+    updateSetting
 }
